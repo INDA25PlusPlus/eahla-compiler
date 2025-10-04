@@ -1,0 +1,13 @@
+<statement_list> ::= <statement> "; " | <statement> "; " <statement_list>
+<statement> ::= <assignment> | <control> | <print>
+
+<assignment> ::= <name> " = " <expr> | <name> " = " <expr> " + " <expr>
+<control> ::= "while " <condition> " { " <statement_list> "}"
+<print> ::= "print " <expr>
+
+<condition> ::= <expr> " < " <expr>
+<expr> ::= <number> | <name>
+<number> ::= [0-9] | [1-9] <trailing_numbers>
+<trailing_numbers> ::= [0-9] | [0-9] <trailing_numbers>
+<name> ::= <letter> | <letter> <name>
+<letter> ::= [a-z] | [A-Z] | "_"
