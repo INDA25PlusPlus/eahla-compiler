@@ -1,4 +1,5 @@
-program = b"a = 0; b = 1; i = 0; while i < 10 { i = i + 1; print a; c = b; b = a + b; a = c; }; "
+program = b"a = 0; b = 1; i = 0; while i < 10 { i = i + 1; print a; c = b; b = a + b; a = c; }; " # fibonacci (first 10)
+# program = b"a = 10; sum = 1; i = 1; while i < a { i = i + 1; prev = sum; j = 1; while j < i { j = j + 1; sum = sum + prev; }; }; print sum; " # factorial (of a)
 
 def is_letter(ch):
     if (b'a'[0] <= ch[0] <= b'z'[0]) or (b'A'[0] <= ch[0] <= b'Z'[0]) or (ch == b'_'):
@@ -57,7 +58,7 @@ while i < len(program):
     
     i += 1
 
-print(tokens)
+# print(tokens)
 
 # then parse
 def add_to_tree(node_kind, parent):
@@ -75,7 +76,7 @@ def rec_parse(current_case, token_to_parse, parent_node):
     match current_case:
         case "statement_list": # <statement_list> ::= <statement> "; " | <statement> "; " <statement_list>
             # top node or while_do
-            node = add_to_tree(("statement_list"), parent_node)
+            node = add_to_tree(["statement_list"], parent_node)
             # depth first build
             while token_to_parse < len(tokens):
                 # skip ;
@@ -102,7 +103,7 @@ def rec_parse(current_case, token_to_parse, parent_node):
             # <assignment> ::= <name> " = " <expr> | <name> " = " <expr> " + " <expr>
             # + should be a node. is a token? each token should be case?
             # assignment node
-            node = add_to_tree(("assignment"), parent_node)
+            node = add_to_tree(["assignment"], parent_node)
 
             token_to_parse = rec_parse("variable", token_to_parse, node)
             token_to_parse += 1 # skip =
@@ -114,23 +115,23 @@ def rec_parse(current_case, token_to_parse, parent_node):
                 token_to_parse = rec_parse("expr", token_to_parse, node)
             return token_to_parse
         case "control":
-            node = add_to_tree(("while"), parent_node)
+            node = add_to_tree(["while"], parent_node)
             token_to_parse += 2 # jump to <
             token_to_parse = rec_parse("condition", token_to_parse, node)
             token_to_parse += 1 # skip {
             return rec_parse("statement_list", token_to_parse, node)
         case "print":
-            node = add_to_tree(("print"), parent_node)
+            node = add_to_tree(["print"], parent_node)
             return rec_parse("expr", token_to_parse + 1, node)
         case "condition":
-            node = add_to_tree(("condition", '<'), parent_node)
+            node = add_to_tree(["condition", '<'], parent_node)
             rec_parse("expr", token_to_parse - 1, node)
             return rec_parse("expr", token_to_parse + 1, node)
         case "expr":
             add_to_tree(tokens[token_to_parse], parent_node) # well
             return token_to_parse + 1
         case "number":
-            add_to_tree(("number", tokens[token_to_parse][1]), parent_node)
+            add_to_tree(["number", tokens[token_to_parse][1]], parent_node)
             return token_to_parse + 1
         # case "trailing_numbers":
         #     ...
@@ -139,15 +140,77 @@ def rec_parse(current_case, token_to_parse, parent_node):
         # case "letter":
         #     ...
         case "+":
-            node = add_to_tree(("+"), parent_node)
+            node = add_to_tree(["+", "+"], parent_node)
             rec_parse("expr", token_to_parse - 1, node)
             rec_parse("expr", token_to_parse + 1, node)
             return token_to_parse + 2
         case "variable": # hm
-            add_to_tree(("variable", tokens[token_to_parse][1]), parent_node)
+            add_to_tree(["variable", tokens[token_to_parse][1]], parent_node)
             return token_to_parse + 1
 
 rec_parse("statement_list", 0, -1)
 
-for i in range(len(tree)):
-    print("node", i, ":", tree[i])
+print("syntax tree:")
+print()
+
+# info tree
+# for i in range(len(tree)):
+#     print("node", i, ":", tree[i])
+
+# prettier tree
+def dfs(node, depth):
+    print(node, end=' ')
+    print(" "*(depth*4), end=' ')
+    # print("node", node, ":", tree[node])
+    print(tree[node][0])
+    for child in tree[node][2]:
+        dfs(child, depth + 1)
+
+dfs(0, 0)
+
+# "compile"/translate
+cpp_code = b'#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n'
+cpp_code_end = b'}'
+
+initialized_vars = [] # how handle scopes? todo!? # (currently(?)) only in assignments
+
+def dfs_compile(node):
+    # print(tree[node][0][0])
+    match tree[node][0][0]:
+        case "statement_list":
+            ret = b""
+            for kid in tree[node][2]:
+                ret += dfs_compile(kid)
+            return ret
+        case "assignment":
+            # add int (or ?) if first occurence
+            # always (currently) 2 kids
+            # (int?) var = kid2
+            ret_prefix = b""
+            if tree[tree[node][2][0]][0][1] not in initialized_vars:
+                ret_prefix = ret_prefix + b"long long "
+                initialized_vars.append(tree[tree[node][2][0]][0][1])
+            return ret_prefix + dfs_compile(tree[node][2][0]) + b" = " + dfs_compile(tree[node][2][1]) + b";\n"
+            # todo! name can be string
+        case "while":
+            # while (<condition>) {<sl>}
+            return b"while (" + dfs_compile(tree[node][2][0]) + b") {\n" + dfs_compile(tree[node][2][1]) + b"}\n"
+        case "print":
+            # cout << <expr> << endl;
+            return b"cout << " + dfs_compile(tree[node][2][0]) + b" << endl;\n"
+        case "condition":
+            return dfs_compile(tree[node][2][0]) + tree[node][0][1].encode() + dfs_compile(tree[node][2][1])
+        case "+":
+            return dfs_compile(tree[node][2][0]) + tree[node][0][1].encode() + dfs_compile(tree[node][2][1])
+        case "variable":
+            return tree[node][0][1].encode()
+        case "number":
+            return tree[node][0][1].encode()
+        case _:
+            print("waaa!", node)
+
+print()
+print()
+print("c++ code:")
+print()
+print((cpp_code + dfs_compile(0) + cpp_code_end).decode())
