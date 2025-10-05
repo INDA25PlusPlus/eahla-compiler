@@ -1,5 +1,6 @@
 program = b"a = 0; b = 1; i = 0; while i < 10 { i = i + 1; print a; c = b; b = a + b; a = c; }; " # fibonacci (first 10)
 # program = b"a = 10; sum = 1; i = 1; while i < a { i = i + 1; prev = sum; j = 1; while j < i { j = j + 1; sum = sum + prev; }; }; print sum; " # factorial (of a)
+# program = b"i = 0; while i < 1 { a = i; i = i + 1; }; print a; " # test scope # is this program even valid? language in and out should be different so yes. but now boring fix.
 
 def is_letter(ch):
     if (b'a'[0] <= ch[0] <= b'z'[0]) or (b'A'[0] <= ch[0] <= b'Z'[0]) or (ch == b'_'):
@@ -170,11 +171,13 @@ dfs(0, 0)
 
 # "compile"/translate
 cpp_code = b'#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n'
+cpp_code_add_to_start = b""
 cpp_code_end = b'}'
 
 initialized_vars = [] # how handle scopes? todo!? # (currently(?)) only in assignments
 
 def dfs_compile(node):
+    global cpp_code_add_to_start
     # print(tree[node][0][0])
     match tree[node][0][0]:
         case "statement_list":
@@ -186,11 +189,10 @@ def dfs_compile(node):
             # add int (or ?) if first occurence
             # always (currently) 2 kids
             # (int?) var = kid2
-            ret_prefix = b""
             if tree[tree[node][2][0]][0][1] not in initialized_vars:
-                ret_prefix = ret_prefix + b"long long "
+                cpp_code_add_to_start += b"long long " + tree[tree[node][2][0]][0][1].encode() + b";\n"
                 initialized_vars.append(tree[tree[node][2][0]][0][1])
-            return ret_prefix + dfs_compile(tree[node][2][0]) + b" = " + dfs_compile(tree[node][2][1]) + b";\n"
+            return dfs_compile(tree[node][2][0]) + b" = " + dfs_compile(tree[node][2][1]) + b";\n"
             # todo! name can be string
         case "while":
             # while (<condition>) {<sl>}
@@ -213,4 +215,5 @@ print()
 print()
 print("c++ code:")
 print()
-print((cpp_code + dfs_compile(0) + cpp_code_end).decode())
+main_code = dfs_compile(0)
+print((cpp_code + cpp_code_add_to_start + main_code + cpp_code_end).decode())
