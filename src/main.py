@@ -1,4 +1,23 @@
-program = b"a = 0; b = 1; i = 0; while i < 10 { i = i + 1; print a; c = b; b = a + b; a = c; }; " # fibonacci (first 10)
+import sys
+
+# input file, code copied from: https://www.tutorialspoint.com/How-to-read-a-file-from-command-line-using-Python
+if len(sys.argv) < 3:
+    print("Missing input file argument. Usage: (python3) main.py <source_filename> <output_filename>")
+    sys.exit(1)
+
+source_code = sys.argv[1]
+
+try:
+    with open(source_code, 'rb') as file:
+        program = file.read()
+except FileNotFoundError:
+    print(f"Error: File '{source_code}' not found.")
+    sys.exit(1)
+except IOError:
+    print(f"Error: Cannot read file '{source_code}'.")
+    sys.exit(1)
+
+# program = b"a = 0; b = 1; i = 0; while i < 10 { i = i + 1; print a; c = b; b = a + b; a = c; }; " # fibonacci (first 10)
 # program = b"a = 10; sum = 1; i = 1; while i < a { i = i + 1; prev = sum; j = 1; while j < i { j = j + 1; sum = sum + prev; }; }; print sum; " # factorial (of a)
 # program = b"i = 0; while i < 1 { a = i; i = i + 1; }; print a; " # test scope # is this program even valid? language in and out should be different so yes. but now boring fix.
 
@@ -151,9 +170,6 @@ def rec_parse(current_case, token_to_parse, parent_node):
 
 rec_parse("statement_list", 0, -1)
 
-print("syntax tree:")
-print()
-
 # info tree
 # for i in range(len(tree)):
 #     print("node", i, ":", tree[i])
@@ -167,7 +183,9 @@ def dfs(node, depth):
     for child in tree[node][2]:
         dfs(child, depth + 1)
 
-dfs(0, 0)
+# print("syntax tree:")
+# print()
+# dfs(0, 0)
 
 # "compile"/translate
 cpp_code = b'#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n'
@@ -211,9 +229,13 @@ def dfs_compile(node):
         case _:
             print("waaa!", node)
 
-print()
-print()
-print("c++ code:")
-print()
 main_code = dfs_compile(0)
-print((cpp_code + cpp_code_add_to_start + main_code + cpp_code_end).decode())
+# https://stackoverflow.com/questions/36571560/directing-print-output-to-a-txt-file
+with open(sys.argv[2], "w") as f:
+  print((cpp_code + cpp_code_add_to_start + main_code + cpp_code_end).decode(), file=f)
+
+# print()
+# print()
+# print("c++ code:")
+# print()
+# print((cpp_code + cpp_code_add_to_start + main_code + cpp_code_end).decode())
