@@ -194,14 +194,14 @@ cpp_code_end = b'}'
 
 initialized_vars = [] # how handle scopes? todo!? # (currently(?)) only in assignments
 
-def dfs_compile(node):
+def dfs_compile_to_cpp(node):
     global cpp_code_add_to_start
     # print(tree[node][0][0])
     match tree[node][0][0]:
         case "statement_list":
             ret = b""
             for kid in tree[node][2]:
-                ret += dfs_compile(kid)
+                ret += dfs_compile_to_cpp(kid)
             return ret
         case "assignment":
             # add int (or ?) if first occurence
@@ -210,18 +210,18 @@ def dfs_compile(node):
             if tree[tree[node][2][0]][0][1] not in initialized_vars:
                 cpp_code_add_to_start += b"long long " + tree[tree[node][2][0]][0][1].encode() + b";\n"
                 initialized_vars.append(tree[tree[node][2][0]][0][1])
-            return dfs_compile(tree[node][2][0]) + b" = " + dfs_compile(tree[node][2][1]) + b";\n"
+            return dfs_compile_to_cpp(tree[node][2][0]) + b" = " + dfs_compile_to_cpp(tree[node][2][1]) + b";\n"
             # todo! name can be string
         case "while":
             # while (<condition>) {<sl>}
-            return b"while (" + dfs_compile(tree[node][2][0]) + b") {\n" + dfs_compile(tree[node][2][1]) + b"}\n"
+            return b"while (" + dfs_compile_to_cpp(tree[node][2][0]) + b") {\n" + dfs_compile_to_cpp(tree[node][2][1]) + b"}\n"
         case "print":
             # cout << <expr> << endl;
-            return b"cout << " + dfs_compile(tree[node][2][0]) + b" << endl;\n"
+            return b"cout << " + dfs_compile_to_cpp(tree[node][2][0]) + b" << endl;\n"
         case "condition":
-            return dfs_compile(tree[node][2][0]) + tree[node][0][1].encode() + dfs_compile(tree[node][2][1])
+            return dfs_compile_to_cpp(tree[node][2][0]) + tree[node][0][1].encode() + dfs_compile_to_cpp(tree[node][2][1])
         case "+":
-            return dfs_compile(tree[node][2][0]) + tree[node][0][1].encode() + dfs_compile(tree[node][2][1])
+            return dfs_compile_to_cpp(tree[node][2][0]) + tree[node][0][1].encode() + dfs_compile_to_cpp(tree[node][2][1])
         case "variable":
             return tree[node][0][1].encode()
         case "number":
@@ -229,10 +229,57 @@ def dfs_compile(node):
         case _:
             print("waaa!", node)
 
-main_code = dfs_compile(0)
-# https://stackoverflow.com/questions/36571560/directing-print-output-to-a-txt-file
-with open(sys.argv[2], "w") as f:
-  print((cpp_code + cpp_code_add_to_start + main_code + cpp_code_end).decode(), file=f)
+def compile_to_cpp():
+    main_code = dfs_compile_to_cpp(0)
+    # https://stackoverflow.com/questions/36571560/directing-print-output-to-a-txt-file
+    with open(sys.argv[2], "w") as f:
+      print((cpp_code + cpp_code_add_to_start + main_code + cpp_code_end).decode(), file=f)
+
+
+def dfs_compile_to_nhg(node):
+    # print(tree[node][0][0])
+    match tree[node][0][0]:
+        case "statement_list":
+            ret = b""
+            for kid in tree[node][2]:
+                ret += dfs_compile_to_nhg(kid)
+            return ret
+        case "assignment":
+            # always (currently) 2 kids?
+            return b"The " + dfs_compile_to_nhg(tree[node][2][0]) + b" transforms into " + dfs_compile_to_nhg(tree[node][2][1]) + b".\n"
+            # todo! name can be string
+        case "while":
+            # or # > enter <place> while
+            # and # > leave <place>
+            # while (<condition>) {<sl>}
+            return b"The story continues as long as " + dfs_compile_to_nhg(tree[node][2][0]) + b" remains true.\n" + dfs_compile_to_nhg(tree[node][2][1]) # !?
+        case "print":
+            return b"You speak of " + dfs_compile_to_nhg(tree[node][2][0]) + b".\n"
+        case "condition":
+            return dfs_compile_to_nhg(tree[node][2][0]) + b" stands before " + dfs_compile_to_nhg(tree[node][2][1])
+        case "+":
+            return b"You reflect on all you have learned: " + dfs_compile_to_nhg(tree[node][2][0]) + b" and " + dfs_compile_to_nhg(tree[node][2][1])
+        case "variable":
+            return tree[node][0][1].encode()
+        case "number":
+            if tree[node][0][1] == '0':
+                return b"nothing"
+            if tree[node][0][1] == '1':
+                return b"everything"
+            return tree[node][0][1].encode()
+        case _:
+            print("waaa!", node)
+
+def compile_to_nhg():
+    nhg_start_code = b"The adventure begins.\n\n"
+    nhg_code_body = dfs_compile_to_nhg(0)
+    nhg_end_code = b"\nThe adventure ends.\n"
+    # https://stackoverflow.com/questions/36571560/directing-print-output-to-a-txt-file
+    with open(sys.argv[2], "w") as f:
+        print((nhg_start_code + nhg_code_body + nhg_end_code).decode(), file=f)
+
+# compile to_cpp()
+compile_to_nhg()
 
 # print()
 # print()
