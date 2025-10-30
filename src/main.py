@@ -5,12 +5,12 @@ from nhg_compiler import compile_to_nhg
 from cpp_compiler import compile_to_cpp
 
 # input file, code copied from: https://www.tutorialspoint.com/How-to-read-a-file-from-command-line-using-Python
-if len(sys.argv) < 3:
-    print("Missing input file argument. Usage: python3 main.py <source_filename> <output_filename>")
+if len(sys.argv) < 4:
+    print("Missing argument/-s. Usage: python3 main.py <'c++' or 'nhg'> <source_filename> <output_filename>")
     sys.exit(1)
 
 # read source file contents
-source = sys.argv[1]
+source = sys.argv[2]
 
 try:
     with open(source, 'rb') as file:
@@ -28,8 +28,12 @@ tokens = tokenize(program)
 
 # parse/build syntax tree from tokens
 tree = parse(tokens)
-# print_pretty_AST(tree)
+print_pretty_AST(tree)
 
 # compile to c++ or nhg
-# compile_to_cpp(tree, sys.argv[2])
-compile_to_nhg(tree, sys.argv[2])
+if sys.argv[1] == "c++":
+    compile_to_cpp(tree, sys.argv[3])
+elif sys.argv[1] == "nhg":
+    compile_to_nhg(tree, sys.argv[3])
+else:
+    print(f"Error: Cannot compile to '{sys.argv[1]}'. Change to 'c++' or 'nhg'.")
